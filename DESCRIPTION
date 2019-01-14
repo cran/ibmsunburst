@@ -1,6 +1,6 @@
 Package: ibmsunburst
 Title: Generate Personality Insights Sunburst Diagrams
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: 
     c(person(given = "Steph",
              family = "Locke",
@@ -34,12 +34,12 @@ Suggests: covr, testthat, knitr, rmarkdown
 VignetteBuilder: knitr
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 6.1.0.9000
+RoxygenNote: 6.1.1
 URL: https://github.com/lockedata/ibmsunburst,
         https://lockedata.github.io/ibmsunburst/
 BugReports: https://github.com/lockedata/ibmsunburst/issues
 NeedsCompilation: no
-Packaged: 2018-10-22 07:08:50 UTC; Maelle
+Packaged: 2019-01-14 13:37:29 UTC; maelle
 Author: Steph Locke [aut, cre] (<https://orcid.org/0000-0002-2387-3723>),
   IBM [cph] (IBM is author of the original JS code.),
   Hendrik Feddersen [fnd] (https://www.ibm.com/),
@@ -48,4 +48,4 @@ Author: Steph Locke [aut, cre] (<https://orcid.org/0000-0002-2387-3723>),
   Maëlle Salmon [ctb] (<https://orcid.org/0000-0002-2815-0399>)
 Maintainer: Steph Locke <steph@itsalocke.com>
 Repository: CRAN
-Date/Publication: 2018-10-30 16:10:07 UTC
+Date/Publication: 2019-01-14 13:50:03 UTC
