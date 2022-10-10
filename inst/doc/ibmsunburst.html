@@ -1,20 +1,33 @@
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
 
 <head>
 
 <meta charset="utf-8" />
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 
 
-<meta name="date" content="2019-01-14" />
+<meta name="date" content="2022-10-10" />
 
-<title>Intro to ibmsunburst</title>
+<title>Introduction to ibmsunburst</title>
 
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
 <script>(function() {
   // If window.HTMLWidgets is already defined, then use it; otherwise create a
   // new object. This allows preceding code to set options that affect the
@@ -250,13 +263,38 @@
           theseArgs = theseArgs.concat([task.data]);
           task = task.code;
         }
-        var taskFunc = eval("(" + task + ")");
+        var taskFunc = tryEval(task);
         if (typeof(taskFunc) !== "function") {
           throw new Error("Task must be a function! Source:\n" + task);
         }
         taskFunc.apply(target, theseArgs);
       });
     }
+  }
+
+  // Attempt eval() both with and without enclosing in parentheses.
+  // Note that enclosing coerces a function declaration into
+  // an expression that eval() can parse
+  // (otherwise, a SyntaxError is thrown)
+  function tryEval(code) {
+    var result = null;
+    try {
+      result = eval("(" + code + ")");
+    } catch(error) {
+      if (!(error instanceof SyntaxError)) {
+        throw error;
+      }
+      try {
+        result = eval(code);
+      } catch(e) {
+        if (e instanceof SyntaxError) {
+          throw error;
+        } else {
+          throw e;
+        }
+      }
+    }
+    return result;
   }
 
   function initSizing(el) {
@@ -651,17 +689,56 @@
     invokePostRenderHandlers();
   }
 
-  // Wait until after the document has loaded to render the widgets.
+
+  function has_jQuery3() {
+    if (!window.jQuery) {
+      return false;
+    }
+    var $version = window.jQuery.fn.jquery;
+    var $major_version = parseInt($version.split(".")[0]);
+    return $major_version >= 3;
+  }
+
+  /*
+  / Shiny 1.4 bumped jQuery from 1.x to 3.x which means jQuery's
+  / on-ready handler (i.e., $(fn)) is now asyncronous (i.e., it now
+  / really means $(setTimeout(fn)).
+  / https://jquery.com/upgrade-guide/3.0/#breaking-change-document-ready-handlers-are-now-asynchronous
+  /
+  / Since Shiny uses $() to schedule initShiny, shiny>=1.4 calls initShiny
+  / one tick later than it did before, which means staticRender() is
+  / called renderValue() earlier than (advanced) widget authors might be expecting.
+  / https://github.com/rstudio/shiny/issues/2630
+  /
+  / For a concrete example, leaflet has some methods (e.g., updateBounds)
+  / which reference Shiny methods registered in initShiny (e.g., setInputValue).
+  / Since leaflet is privy to this life-cycle, it knows to use setTimeout() to
+  / delay execution of those methods (until Shiny methods are ready)
+  / https://github.com/rstudio/leaflet/blob/18ec981/javascript/src/index.js#L266-L268
+  /
+  / Ideally widget authors wouldn't need to use this setTimeout() hack that
+  / leaflet uses to call Shiny methods on a staticRender(). In the long run,
+  / the logic initShiny should be broken up so that method registration happens
+  / right away, but binding happens later.
+  */
+  function maybeStaticRenderLater() {
+    if (shinyMode && has_jQuery3()) {
+      window.jQuery(window.HTMLWidgets.staticRender);
+    } else {
+      window.HTMLWidgets.staticRender();
+    }
+  }
+
   if (document.addEventListener) {
     document.addEventListener("DOMContentLoaded", function() {
       document.removeEventListener("DOMContentLoaded", arguments.callee, false);
-      window.HTMLWidgets.staticRender();
+      maybeStaticRenderLater();
     }, false);
   } else if (document.attachEvent) {
     document.attachEvent("onreadystatechange", function() {
       if (document.readyState === "complete") {
         document.detachEvent("onreadystatechange", arguments.callee);
-        window.HTMLWidgets.staticRender();
+        maybeStaticRenderLater();
       }
     });
   }
@@ -749,7 +826,7 @@
       if (o !== null && typeof o === "object" && part in o) {
         if (i == (l - 1)) { // if we are at the end of the line then evalulate
           if (typeof o[part] === "string")
-            o[part] = eval("(" + o[part] + ")");
+            o[part] = tryEval(o[part]);
         } else { // otherwise continue to next embedded object
           o = o[part];
         }
@@ -4126,29 +4203,48 @@ t.constructor={})[e(5)("species")]=function(t){t(A,A)};return(I||"function"==typ
 });
 </script>
 
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
 
-<style type="text/css">code{white-space: pre;}</style>
+
+
+<style type="text/css">
+  code {
+    white-space: pre;
+  }
+  .sourceCode {
+    overflow: visible;
+  }
+</style>
 <style type="text/css" data-origin="pandoc">
-a.sourceLine { display: inline-block; line-height: 1.25; }
-a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
-a.sourceLine:empty { height: 1.2em; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
-code.sourceCode { white-space: pre; position: relative; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
 div.sourceCode { margin: 1em 0; }
 pre.sourceCode { margin: 0; }
 @media screen {
 div.sourceCode { overflow: auto; }
 }
 @media print {
-code.sourceCode { white-space: pre-wrap; }
-a.sourceLine { text-indent: -1em; padding-left: 1em; }
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
-pre.numberSource a.sourceLine
-  { position: relative; left: -4em; }
-pre.numberSource a.sourceLine::before
-  { content: attr(data-line-number);
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
     position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; pointer-events: all; display: inline-block;
+    border: none; display: inline-block;
     -webkit-touch-callout: none; -webkit-user-select: none;
     -khtml-user-select: none; -moz-user-select: none;
     -ms-user-select: none; user-select: none;
@@ -4157,9 +4253,9 @@ pre.numberSource a.sourceLine::before
   }
 pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
 div.sourceCode
-  {  }
+  {   }
 @media screen {
-a.sourceLine::before { text-decoration: underline; }
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 code span.al { color: #ff0000; font-weight: bold; } /* Alert */
 code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
@@ -4199,13 +4295,20 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   for (var i = 0; i < sheets.length; i++) {
     if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
     try { var rules = sheets[i].cssRules; } catch (e) { continue; }
-    for (var j = 0; j < rules.length; j++) {
+    var j = 0;
+    while (j < rules.length) {
       var rule = rules[j];
       // check if there is a div.sourceCode rule
-      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
       var style = rule.style.cssText;
       // check if color or background-color is set
-      if (rule.style.color === '' || rule.style.backgroundColor === '') continue;
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
       // replace div.sourceCode by a pre.sourceCode rule
       sheets[i].deleteRule(j);
       sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
@@ -4213,6 +4316,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   }
 })();
 </script>
+
 
 
 
@@ -4226,9 +4330,6 @@ padding-right: 2em;
 font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
 font-size: 14px;
 line-height: 1.35;
-}
-#header {
-text-align: center;
 }
 #TOC {
 clear: both;
@@ -4397,8 +4498,12 @@ code > span.st { color: #d14; }
 code > span.co { color: #888888; font-style: italic; } 
 code > span.ot { color: #007020; } 
 code > span.al { color: #ff0000; font-weight: bold; } 
-code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61717; background-color: #e3d2d2; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
 </style>
+
+
+
 
 </head>
 
@@ -4407,56 +4512,67 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 
 
 
-<h1 class="title toc-ignore">Intro to ibmsunburst</h1>
-<h4 class="date"><em>2019-01-14</em></h4>
+<h1 class="title toc-ignore">Introduction to ibmsunburst</h1>
+<h4 class="date">2022-10-10</h4>
 
 
 
-<p>The goal of ibmsunburst is to wrap the <a href="https://github.com/personality-insights/sunburst-chart/">JavaScript library that IBM have produced</a> for making sunburst personality insights charts for use in R and R Markdown documents.</p>
+<p>The goal of {ibmsunburst} is to wrap the <a href="https://github.com/personality-insights/sunburst-chart/">JavaScript
+library that IBM have produced</a> for making sunburst personality
+insights charts for use in R and R Markdown documents.</p>
 <div id="use-with-example-data" class="section level1">
 <h1>Use with example data</h1>
-<p>The package contains a few examples JSON files corresponding to output from the API.</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" data-line-number="1">ibmsunburst<span class="op">::</span><span class="kw">ibmsunburst</span>(<span class="kw">system.file</span>(</a>
-<a class="sourceLine" id="cb1-2" data-line-number="2">  <span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;profiles&quot;</span>,</a>
-<a class="sourceLine" id="cb1-3" data-line-number="3">  <span class="st">&quot;en_v2.json&quot;</span>, <span class="dt">package =</span> <span class="st">&quot;ibmsunburst&quot;</span></a>
-<a class="sourceLine" id="cb1-4" data-line-number="4">),</a>
-<a class="sourceLine" id="cb1-5" data-line-number="5">                           <span class="dt">version =</span> <span class="st">&quot;v2&quot;</span>)</a></code></pre></div>
-<div id="htmlwidget-f492b24bfa71c7948ce5" style="width:288px;height:288px;" class="ibmsunburst html-widget"></div>
-<script type="application/json" data-for="htmlwidget-f492b24bfa71c7948ce5">{"x":{"data":{"id":"*UNKNOWN*","source":"*UNKNOWN*","word_count":6582,"processed_lang":"en","tree":{"id":"r","name":"root","children":[{"id":"personality","name":"Big 5","children":[{"id":"Openness_parent","name":"Openness","category":"personality","percentage":0.9806,"children":[{"id":"Openness","name":"Openness","category":"personality","percentage":0.9806,"sampling_error":0.0506,"children":[{"id":"Adventurousness","name":"Adventurousness","category":"personality","percentage":0.9504,"sampling_error":0.0447},{"id":"Artistic interests","name":"Artistic interests","category":"personality","percentage":0.8849,"sampling_error":0.0915},{"id":"Emotionality","name":"Emotionality","category":"personality","percentage":0.1705,"sampling_error":0.0415},{"id":"Imagination","name":"Imagination","category":"personality","percentage":0.2011,"sampling_error":0.0554},{"id":"Intellect","name":"Intellect","category":"personality","percentage":0.9824,"sampling_error":0.0481},{"id":"Liberalism","name":"Authority-challenging","category":"personality","percentage":0.9649,"sampling_error":0.0742}]},{"id":"Conscientiousness","name":"Conscientiousness","category":"personality","percentage":0.8937,"sampling_error":0.0641,"children":[{"id":"Achievement striving","name":"Achievement striving","category":"personality","percentage":0.9217,"sampling_error":0.0871},{"id":"Cautiousness","name":"Cautiousness","category":"personality","percentage":0.9589,"sampling_error":0.081},{"id":"Dutifulness","name":"Dutifulness","category":"personality","percentage":0.7565,"sampling_error":0.0535},{"id":"Orderliness","name":"Orderliness","category":"personality","percentage":0.4813,"sampling_error":0.0615},{"id":"Self-discipline","name":"Self-discipline","category":"personality","percentage":0.8215,"sampling_error":0.0418},{"id":"Self-efficacy","name":"Self-efficacy","category":"personality","percentage":0.9086,"sampling_error":0.0801}]},{"id":"Extraversion","name":"Extraversion","category":"personality","percentage":0.3363,"sampling_error":0.0485,"children":[{"id":"Activity level","name":"Activity level","category":"personality","percentage":0.979,"sampling_error":0.0673},{"id":"Assertiveness","name":"Assertiveness","category":"personality","percentage":0.9825,"sampling_error":0.0716},{"id":"Cheerfulness","name":"Cheerfulness","category":"personality","percentage":0.1947,"sampling_error":0.0899},{"id":"Excitement-seeking","name":"Excitement-seeking","category":"personality","percentage":0.215,"sampling_error":0.0737},{"id":"Friendliness","name":"Outgoing","category":"personality","percentage":0.6006,"sampling_error":0.0663},{"id":"Gregariousness","name":"Gregariousness","category":"personality","percentage":0.2421,"sampling_error":0.0514}]},{"id":"Agreeableness","name":"Agreeableness","category":"personality","percentage":0.0534,"sampling_error":0.0861,"children":[{"id":"Altruism","name":"Altruism","category":"personality","percentage":0.8722,"sampling_error":0.0617},{"id":"Cooperation","name":"Cooperation","category":"personality","percentage":0.76,"sampling_error":0.0716},{"id":"Modesty","name":"Modesty","category":"personality","percentage":0.3495,"sampling_error":0.0474},{"id":"Morality","name":"Uncompromising","category":"personality","percentage":0.648,"sampling_error":0.0551},{"id":"Sympathy","name":"Sympathy","category":"personality","percentage":0.9812,"sampling_error":0.0855},{"id":"Trust","name":"Trust","category":"personality","percentage":0.9241,"sampling_error":0.0481}]},{"id":"Neuroticism","name":"Emotional range","category":"personality","percentage":0.9213,"sampling_error":0.0782,"children":[{"id":"Anger","name":"Fiery","category":"personality","percentage":0.0167,"sampling_error":0.0823},{"id":"Anxiety","name":"Prone to worry","category":"personality","percentage":0.0497,"sampling_error":0.0472},{"id":"Depression","name":"Melancholy","category":"personality","percentage":0.2726,"sampling_error":0.0492},{"id":"Immoderation","name":"Immoderation","category":"personality","percentage":0.006,"sampling_error":0.0464},{"id":"Self-consciousness","name":"Self-consciousness","category":"personality","percentage":0.1257,"sampling_error":0.0483},{"id":"Vulnerability","name":"Susceptible to stress","category":"personality","percentage":0.0578,"sampling_error":0.0738}]}]}]},{"id":"needs","name":"Needs","children":[{"id":"Ideal_parent","name":"Ideal","category":"needs","percentage":0.0082,"children":[{"id":"Challenge","name":"Challenge","category":"needs","percentage":0.0093,"sampling_error":0.0725},{"id":"Closeness","name":"Closeness","category":"needs","percentage":0.1601,"sampling_error":0.0719},{"id":"Curiosity","name":"Curiosity","category":"needs","percentage":0.6537,"sampling_error":0.1015},{"id":"Excitement","name":"Excitement","category":"needs","percentage":0.0936,"sampling_error":0.0914},{"id":"Harmony","name":"Harmony","category":"needs","percentage":0.0577,"sampling_error":0.0911},{"id":"Ideal","name":"Ideal","category":"needs","percentage":0.0082,"sampling_error":0.0827},{"id":"Liberty","name":"Liberty","category":"needs","percentage":0.0637,"sampling_error":0.1236},{"id":"Love","name":"Love","category":"needs","percentage":0.0285,"sampling_error":0.0834},{"id":"Practicality","name":"Practicality","category":"needs","percentage":0.0506,"sampling_error":0.0738},{"id":"Self-expression","name":"Self-expression","category":"needs","percentage":0.0409,"sampling_error":0.0709},{"id":"Stability","name":"Stability","category":"needs","percentage":0.3829,"sampling_error":0.0904},{"id":"Structure","name":"Structure","category":"needs","percentage":0.8207,"sampling_error":0.0686}]}]},{"id":"values","name":"Values","children":[{"id":"Hedonism_parent","name":"Hedonism","category":"values","percentage":0.003,"children":[{"id":"Conservation","name":"Conservation","category":"values","percentage":0.1606,"sampling_error":0.0627},{"id":"Openness to change","name":"Openness to change","category":"values","percentage":0.5884,"sampling_error":0.0567},{"id":"Hedonism","name":"Hedonism","category":"values","percentage":0.003,"sampling_error":0.1137},{"id":"Self-enhancement","name":"Self-enhancement","category":"values","percentage":0.0121,"sampling_error":0.0869},{"id":"Self-transcendence","name":"Self-transcendence","category":"values","percentage":0.1054,"sampling_error":0.0656}]}]}]},"warnings":[]},"version":"v2"},"evals":[],"jsHooks":[]}</script>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" data-line-number="1"></a>
-<a class="sourceLine" id="cb2-2" data-line-number="2">ibmsunburst<span class="op">::</span><span class="kw">ibmsunburst</span>(<span class="kw">system.file</span>(</a>
-<a class="sourceLine" id="cb2-3" data-line-number="3">  <span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;profiles&quot;</span>,</a>
-<a class="sourceLine" id="cb2-4" data-line-number="4">  <span class="st">&quot;en_v3.json&quot;</span>, <span class="dt">package =</span> <span class="st">&quot;ibmsunburst&quot;</span></a>
-<a class="sourceLine" id="cb2-5" data-line-number="5">),</a>
-<a class="sourceLine" id="cb2-6" data-line-number="6">                           <span class="dt">version =</span> <span class="st">&quot;v3&quot;</span>)</a></code></pre></div>
-<div id="htmlwidget-a88cf2d6c0b636830926" style="width:288px;height:288px;" class="ibmsunburst html-widget"></div>
-<script type="application/json" data-for="htmlwidget-a88cf2d6c0b636830926">{"x":{"data":{"word_count":6582,"processed_language":"en","personality":[{"trait_id":"big5_openness","name":"Openness","category":"personality","percentile":0.9806,"children":[{"trait_id":"facet_adventurousness","name":"Adventurousness","category":"personality","percentile":0.9504},{"trait_id":"facet_artistic_interests","name":"Artistic interests","category":"personality","percentile":0.8849},{"trait_id":"facet_emotionality","name":"Emotionality","category":"personality","percentile":0.1705},{"trait_id":"facet_imagination","name":"Imagination","category":"personality","percentile":0.2011},{"trait_id":"facet_intellect","name":"Intellect","category":"personality","percentile":0.9824},{"trait_id":"facet_liberalism","name":"Authority-challenging","category":"personality","percentile":0.9649}]},{"trait_id":"big5_conscientiousness","name":"Conscientiousness","category":"personality","percentile":0.8937,"children":[{"trait_id":"facet_achievement_striving","name":"Achievement striving","category":"personality","percentile":0.9217},{"trait_id":"facet_cautiousness","name":"Cautiousness","category":"personality","percentile":0.9589},{"trait_id":"facet_dutifulness","name":"Dutifulness","category":"personality","percentile":0.7565},{"trait_id":"facet_orderliness","name":"Orderliness","category":"personality","percentile":0.4813},{"trait_id":"facet_self_discipline","name":"Self-discipline","category":"personality","percentile":0.8215},{"trait_id":"facet_self_efficacy","name":"Self-efficacy","category":"personality","percentile":0.9086}]},{"trait_id":"big5_extraversion","name":"Extraversion","category":"personality","percentile":0.3363,"children":[{"trait_id":"facet_activity_level","name":"Activity level","category":"personality","percentile":0.979},{"trait_id":"facet_assertiveness","name":"Assertiveness","category":"personality","percentile":0.9825},{"trait_id":"facet_cheerfulness","name":"Cheerfulness","category":"personality","percentile":0.1947},{"trait_id":"facet_excitement_seeking","name":"Excitement-seeking","category":"personality","percentile":0.215},{"trait_id":"facet_friendliness","name":"Outgoing","category":"personality","percentile":0.6006},{"trait_id":"facet_gregariousness","name":"Gregariousness","category":"personality","percentile":0.2421}]},{"trait_id":"big5_agreeableness","name":"Agreeableness","category":"personality","percentile":0.0534,"children":[{"trait_id":"facet_altruism","name":"Altruism","category":"personality","percentile":0.8722},{"trait_id":"facet_cooperation","name":"Cooperation","category":"personality","percentile":0.76},{"trait_id":"facet_modesty","name":"Modesty","category":"personality","percentile":0.3495},{"trait_id":"facet_morality","name":"Uncompromising","category":"personality","percentile":0.648},{"trait_id":"facet_sympathy","name":"Sympathy","category":"personality","percentile":0.9812},{"trait_id":"facet_trust","name":"Trust","category":"personality","percentile":0.9241}]},{"trait_id":"big5_neuroticism","name":"Emotional range","category":"personality","percentile":0.9213,"children":[{"trait_id":"facet_anger","name":"Fiery","category":"personality","percentile":0.0167},{"trait_id":"facet_anxiety","name":"Prone to worry","category":"personality","percentile":0.0497},{"trait_id":"facet_depression","name":"Melancholy","category":"personality","percentile":0.2726},{"trait_id":"facet_immoderation","name":"Immoderation","category":"personality","percentile":0.006},{"trait_id":"facet_self_consciousness","name":"Self-consciousness","category":"personality","percentile":0.1257},{"trait_id":"facet_vulnerability","name":"Susceptible to stress","category":"personality","percentile":0.0578}]}],"needs":[{"trait_id":"need_challenge","name":"Challenge","category":"needs","percentile":0.0093},{"trait_id":"need_closeness","name":"Closeness","category":"needs","percentile":0.1601},{"trait_id":"need_curiosity","name":"Curiosity","category":"needs","percentile":0.6537},{"trait_id":"need_excitement","name":"Excitement","category":"needs","percentile":0.0936},{"trait_id":"need_harmony","name":"Harmony","category":"needs","percentile":0.0577},{"trait_id":"need_ideal","name":"Ideal","category":"needs","percentile":0.0082},{"trait_id":"need_liberty","name":"Liberty","category":"needs","percentile":0.0637},{"trait_id":"need_love","name":"Love","category":"needs","percentile":0.0285},{"trait_id":"need_practicality","name":"Practicality","category":"needs","percentile":0.0506},{"trait_id":"need_self_expression","name":"Self-expression","category":"needs","percentile":0.0409},{"trait_id":"need_stability","name":"Stability","category":"needs","percentile":0.3829},{"trait_id":"need_structure","name":"Structure","category":"needs","percentile":0.8207}],"values":[{"trait_id":"value_conservation","name":"Conservation","category":"values","percentile":0.1606},{"trait_id":"value_openness_to_change","name":"Openness to change","category":"values","percentile":0.5884},{"trait_id":"value_hedonism","name":"Hedonism","category":"values","percentile":0.003},{"trait_id":"value_self_enhancement","name":"Self-enhancement","category":"values","percentile":0.0121},{"trait_id":"value_self_transcendence","name":"Self-transcendence","category":"values","percentile":0.1054}],"warnings":[]},"version":"v3"},"evals":[],"jsHooks":[]}</script>
-<p>If you use the wrong version argument, then the widget will be blank.</p>
+<p>The package contains a few examples JSON files corresponding to
+output from the API.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>ibmsunburst<span class="sc">::</span><span class="fu">ibmsunburst</span>(<span class="fu">system.file</span>(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;profiles&quot;</span>,</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;en_v2.json&quot;</span>, <span class="at">package =</span> <span class="st">&quot;ibmsunburst&quot;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>),</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>                           <span class="at">version =</span> <span class="st">&quot;v2&quot;</span>)</span></code></pre></div>
+<div id="htmlwidget-2fdd2a479c15b254516a" style="width:288px;height:288px;" class="ibmsunburst html-widget"></div>
+<script type="application/json" data-for="htmlwidget-2fdd2a479c15b254516a">{"x":{"data":{"id":"*UNKNOWN*","source":"*UNKNOWN*","word_count":6582,"processed_lang":"en","tree":{"id":"r","name":"root","children":[{"id":"personality","name":"Big 5","children":[{"id":"Openness_parent","name":"Openness","category":"personality","percentage":0.9806,"children":[{"id":"Openness","name":"Openness","category":"personality","percentage":0.9806,"sampling_error":0.0506,"children":[{"id":"Adventurousness","name":"Adventurousness","category":"personality","percentage":0.9504,"sampling_error":0.0447},{"id":"Artistic interests","name":"Artistic interests","category":"personality","percentage":0.8849,"sampling_error":0.0915},{"id":"Emotionality","name":"Emotionality","category":"personality","percentage":0.1705,"sampling_error":0.0415},{"id":"Imagination","name":"Imagination","category":"personality","percentage":0.2011,"sampling_error":0.0554},{"id":"Intellect","name":"Intellect","category":"personality","percentage":0.9824,"sampling_error":0.0481},{"id":"Liberalism","name":"Authority-challenging","category":"personality","percentage":0.9649,"sampling_error":0.0742}]},{"id":"Conscientiousness","name":"Conscientiousness","category":"personality","percentage":0.8937,"sampling_error":0.0641,"children":[{"id":"Achievement striving","name":"Achievement striving","category":"personality","percentage":0.9217,"sampling_error":0.0871},{"id":"Cautiousness","name":"Cautiousness","category":"personality","percentage":0.9589,"sampling_error":0.081},{"id":"Dutifulness","name":"Dutifulness","category":"personality","percentage":0.7565,"sampling_error":0.0535},{"id":"Orderliness","name":"Orderliness","category":"personality","percentage":0.4813,"sampling_error":0.0615},{"id":"Self-discipline","name":"Self-discipline","category":"personality","percentage":0.8215,"sampling_error":0.0418},{"id":"Self-efficacy","name":"Self-efficacy","category":"personality","percentage":0.9086,"sampling_error":0.0801}]},{"id":"Extraversion","name":"Extraversion","category":"personality","percentage":0.3363,"sampling_error":0.0485,"children":[{"id":"Activity level","name":"Activity level","category":"personality","percentage":0.979,"sampling_error":0.0673},{"id":"Assertiveness","name":"Assertiveness","category":"personality","percentage":0.9825,"sampling_error":0.0716},{"id":"Cheerfulness","name":"Cheerfulness","category":"personality","percentage":0.1947,"sampling_error":0.0899},{"id":"Excitement-seeking","name":"Excitement-seeking","category":"personality","percentage":0.215,"sampling_error":0.0737},{"id":"Friendliness","name":"Outgoing","category":"personality","percentage":0.6006,"sampling_error":0.0663},{"id":"Gregariousness","name":"Gregariousness","category":"personality","percentage":0.2421,"sampling_error":0.0514}]},{"id":"Agreeableness","name":"Agreeableness","category":"personality","percentage":0.0534,"sampling_error":0.0861,"children":[{"id":"Altruism","name":"Altruism","category":"personality","percentage":0.8722,"sampling_error":0.0617},{"id":"Cooperation","name":"Cooperation","category":"personality","percentage":0.76,"sampling_error":0.0716},{"id":"Modesty","name":"Modesty","category":"personality","percentage":0.3495,"sampling_error":0.0474},{"id":"Morality","name":"Uncompromising","category":"personality","percentage":0.648,"sampling_error":0.0551},{"id":"Sympathy","name":"Sympathy","category":"personality","percentage":0.9812,"sampling_error":0.0855},{"id":"Trust","name":"Trust","category":"personality","percentage":0.9241,"sampling_error":0.0481}]},{"id":"Neuroticism","name":"Emotional range","category":"personality","percentage":0.9213,"sampling_error":0.0782,"children":[{"id":"Anger","name":"Fiery","category":"personality","percentage":0.0167,"sampling_error":0.0823},{"id":"Anxiety","name":"Prone to worry","category":"personality","percentage":0.0497,"sampling_error":0.0472},{"id":"Depression","name":"Melancholy","category":"personality","percentage":0.2726,"sampling_error":0.0492},{"id":"Immoderation","name":"Immoderation","category":"personality","percentage":0.006,"sampling_error":0.0464},{"id":"Self-consciousness","name":"Self-consciousness","category":"personality","percentage":0.1257,"sampling_error":0.0483},{"id":"Vulnerability","name":"Susceptible to stress","category":"personality","percentage":0.0578,"sampling_error":0.0738}]}]}]},{"id":"needs","name":"Needs","children":[{"id":"Ideal_parent","name":"Ideal","category":"needs","percentage":0.0082,"children":[{"id":"Challenge","name":"Challenge","category":"needs","percentage":0.0093,"sampling_error":0.0725},{"id":"Closeness","name":"Closeness","category":"needs","percentage":0.1601,"sampling_error":0.0719},{"id":"Curiosity","name":"Curiosity","category":"needs","percentage":0.6537,"sampling_error":0.1015},{"id":"Excitement","name":"Excitement","category":"needs","percentage":0.0936,"sampling_error":0.0914},{"id":"Harmony","name":"Harmony","category":"needs","percentage":0.0577,"sampling_error":0.0911},{"id":"Ideal","name":"Ideal","category":"needs","percentage":0.0082,"sampling_error":0.0827},{"id":"Liberty","name":"Liberty","category":"needs","percentage":0.0637,"sampling_error":0.1236},{"id":"Love","name":"Love","category":"needs","percentage":0.0285,"sampling_error":0.0834},{"id":"Practicality","name":"Practicality","category":"needs","percentage":0.0506,"sampling_error":0.0738},{"id":"Self-expression","name":"Self-expression","category":"needs","percentage":0.0409,"sampling_error":0.0709},{"id":"Stability","name":"Stability","category":"needs","percentage":0.3829,"sampling_error":0.0904},{"id":"Structure","name":"Structure","category":"needs","percentage":0.8207,"sampling_error":0.0686}]}]},{"id":"values","name":"Values","children":[{"id":"Hedonism_parent","name":"Hedonism","category":"values","percentage":0.003,"children":[{"id":"Conservation","name":"Conservation","category":"values","percentage":0.1606,"sampling_error":0.0627},{"id":"Openness to change","name":"Openness to change","category":"values","percentage":0.5884,"sampling_error":0.0567},{"id":"Hedonism","name":"Hedonism","category":"values","percentage":0.003,"sampling_error":0.1137},{"id":"Self-enhancement","name":"Self-enhancement","category":"values","percentage":0.0121,"sampling_error":0.0869},{"id":"Self-transcendence","name":"Self-transcendence","category":"values","percentage":0.1054,"sampling_error":0.0656}]}]}]},"warnings":[]},"version":"v2"},"evals":[],"jsHooks":[]}</script>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>ibmsunburst<span class="sc">::</span><span class="fu">ibmsunburst</span>(<span class="fu">system.file</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;profiles&quot;</span>,</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;en_v3.json&quot;</span>, <span class="at">package =</span> <span class="st">&quot;ibmsunburst&quot;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>),</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>                           <span class="at">version =</span> <span class="st">&quot;v3&quot;</span>)</span></code></pre></div>
+<div id="htmlwidget-7c9e49caf6c3392d7cd1" style="width:288px;height:288px;" class="ibmsunburst html-widget"></div>
+<script type="application/json" data-for="htmlwidget-7c9e49caf6c3392d7cd1">{"x":{"data":{"word_count":6582,"processed_language":"en","personality":[{"trait_id":"big5_openness","name":"Openness","category":"personality","percentile":0.9806,"children":[{"trait_id":"facet_adventurousness","name":"Adventurousness","category":"personality","percentile":0.9504},{"trait_id":"facet_artistic_interests","name":"Artistic interests","category":"personality","percentile":0.8849},{"trait_id":"facet_emotionality","name":"Emotionality","category":"personality","percentile":0.1705},{"trait_id":"facet_imagination","name":"Imagination","category":"personality","percentile":0.2011},{"trait_id":"facet_intellect","name":"Intellect","category":"personality","percentile":0.9824},{"trait_id":"facet_liberalism","name":"Authority-challenging","category":"personality","percentile":0.9649}]},{"trait_id":"big5_conscientiousness","name":"Conscientiousness","category":"personality","percentile":0.8937,"children":[{"trait_id":"facet_achievement_striving","name":"Achievement striving","category":"personality","percentile":0.9217},{"trait_id":"facet_cautiousness","name":"Cautiousness","category":"personality","percentile":0.9589},{"trait_id":"facet_dutifulness","name":"Dutifulness","category":"personality","percentile":0.7565},{"trait_id":"facet_orderliness","name":"Orderliness","category":"personality","percentile":0.4813},{"trait_id":"facet_self_discipline","name":"Self-discipline","category":"personality","percentile":0.8215},{"trait_id":"facet_self_efficacy","name":"Self-efficacy","category":"personality","percentile":0.9086}]},{"trait_id":"big5_extraversion","name":"Extraversion","category":"personality","percentile":0.3363,"children":[{"trait_id":"facet_activity_level","name":"Activity level","category":"personality","percentile":0.979},{"trait_id":"facet_assertiveness","name":"Assertiveness","category":"personality","percentile":0.9825},{"trait_id":"facet_cheerfulness","name":"Cheerfulness","category":"personality","percentile":0.1947},{"trait_id":"facet_excitement_seeking","name":"Excitement-seeking","category":"personality","percentile":0.215},{"trait_id":"facet_friendliness","name":"Outgoing","category":"personality","percentile":0.6006},{"trait_id":"facet_gregariousness","name":"Gregariousness","category":"personality","percentile":0.2421}]},{"trait_id":"big5_agreeableness","name":"Agreeableness","category":"personality","percentile":0.0534,"children":[{"trait_id":"facet_altruism","name":"Altruism","category":"personality","percentile":0.8722},{"trait_id":"facet_cooperation","name":"Cooperation","category":"personality","percentile":0.76},{"trait_id":"facet_modesty","name":"Modesty","category":"personality","percentile":0.3495},{"trait_id":"facet_morality","name":"Uncompromising","category":"personality","percentile":0.648},{"trait_id":"facet_sympathy","name":"Sympathy","category":"personality","percentile":0.9812},{"trait_id":"facet_trust","name":"Trust","category":"personality","percentile":0.9241}]},{"trait_id":"big5_neuroticism","name":"Emotional range","category":"personality","percentile":0.9213,"children":[{"trait_id":"facet_anger","name":"Fiery","category":"personality","percentile":0.0167},{"trait_id":"facet_anxiety","name":"Prone to worry","category":"personality","percentile":0.0497},{"trait_id":"facet_depression","name":"Melancholy","category":"personality","percentile":0.2726},{"trait_id":"facet_immoderation","name":"Immoderation","category":"personality","percentile":0.006},{"trait_id":"facet_self_consciousness","name":"Self-consciousness","category":"personality","percentile":0.1257},{"trait_id":"facet_vulnerability","name":"Susceptible to stress","category":"personality","percentile":0.0578}]}],"needs":[{"trait_id":"need_challenge","name":"Challenge","category":"needs","percentile":0.0093},{"trait_id":"need_closeness","name":"Closeness","category":"needs","percentile":0.1601},{"trait_id":"need_curiosity","name":"Curiosity","category":"needs","percentile":0.6537},{"trait_id":"need_excitement","name":"Excitement","category":"needs","percentile":0.0936},{"trait_id":"need_harmony","name":"Harmony","category":"needs","percentile":0.0577},{"trait_id":"need_ideal","name":"Ideal","category":"needs","percentile":0.0082},{"trait_id":"need_liberty","name":"Liberty","category":"needs","percentile":0.0637},{"trait_id":"need_love","name":"Love","category":"needs","percentile":0.0285},{"trait_id":"need_practicality","name":"Practicality","category":"needs","percentile":0.0506},{"trait_id":"need_self_expression","name":"Self-expression","category":"needs","percentile":0.0409},{"trait_id":"need_stability","name":"Stability","category":"needs","percentile":0.3829},{"trait_id":"need_structure","name":"Structure","category":"needs","percentile":0.8207}],"values":[{"trait_id":"value_conservation","name":"Conservation","category":"values","percentile":0.1606},{"trait_id":"value_openness_to_change","name":"Openness to change","category":"values","percentile":0.5884},{"trait_id":"value_hedonism","name":"Hedonism","category":"values","percentile":0.003},{"trait_id":"value_self_enhancement","name":"Self-enhancement","category":"values","percentile":0.0121},{"trait_id":"value_self_transcendence","name":"Self-transcendence","category":"values","percentile":0.1054}],"warnings":[]},"version":"v3"},"evals":[],"jsHooks":[]}</script>
+<p>If you use the wrong version argument, then the widget will be
+blank.</p>
 </div>
 <div id="use-with-real-data" class="section level1">
 <h1>Use with real data</h1>
-<p>The actual use of the package is to apply it on the output from <a href="https://www.ibm.com/watson/developercloud/personality-insights/api/v3/">IBM Personality Insight API</a>. <code>ibmsunburst::ibmsunburst()</code> accept the data as list, JSON or path to file.</p>
-<p>Say you have a text file of someone’s writing, called “sample.txt”. Here’s how you could query the API. There is no R wrapper for it… yet?</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" data-line-number="1">key =<span class="st"> &quot;your-key-not-this&quot;</span></a>
-<a class="sourceLine" id="cb3-2" data-line-number="2">url =<span class="st"> &quot;https://gateway.watsonplatform.net/personality-insights/api/v3/profile?version=2017-10-13&quot;</span></a>
-<a class="sourceLine" id="cb3-3" data-line-number="3">uname=<span class="st">&quot;your-username-not-this&quot;</span></a>
-<a class="sourceLine" id="cb3-4" data-line-number="4">pword=<span class="st">&quot;your-password&quot;</span></a>
-<a class="sourceLine" id="cb3-5" data-line-number="5"><span class="kw">library</span>(httr)</a>
-<a class="sourceLine" id="cb3-6" data-line-number="6">cr=<span class="kw">POST</span>(url,</a>
-<a class="sourceLine" id="cb3-7" data-line-number="7">        <span class="kw">authenticate</span>(uname, pword),</a>
-<a class="sourceLine" id="cb3-8" data-line-number="8">        <span class="kw">content_type</span>(<span class="st">&quot;text/plain;charset=utf-8&quot;</span>),</a>
-<a class="sourceLine" id="cb3-9" data-line-number="9">        <span class="kw">accept_json</span>(),</a>
-<a class="sourceLine" id="cb3-10" data-line-number="10">        <span class="dt">body=</span><span class="kw">upload_file</span>(<span class="st">&quot;sample.txt&quot;</span>)</a>
-<a class="sourceLine" id="cb3-11" data-line-number="11">)</a>
-<a class="sourceLine" id="cb3-12" data-line-number="12">insightdata =<span class="st"> </span><span class="kw">content</span>(cr)</a></code></pre></div>
-<p>The result is a list, that you can directly pass to <code>ibmsunburst::ibmsunburst()</code>.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" data-line-number="1">ibmsunburst<span class="op">::</span><span class="kw">ibmsunburst</span>(insightdata,</a>
-<a class="sourceLine" id="cb4-2" data-line-number="2">                         <span class="dt">version =</span> <span class="st">&quot;v3&quot;</span>)</a></code></pre></div>
-<div id="htmlwidget-3b8d4c765b948b2d7c3e" style="width:288px;height:288px;" class="ibmsunburst html-widget"></div>
-<script type="application/json" data-for="htmlwidget-3b8d4c765b948b2d7c3e">{"x":{"data":{"word_count":1367,"processed_language":"en","personality":[{"trait_id":"big5_openness","name":"Openness","category":"personality","percentile":0.9969,"significant":true,"children":[{"trait_id":"facet_adventurousness","name":"Adventurousness","category":"personality","percentile":0.7854,"significant":true},{"trait_id":"facet_artistic_interests","name":"Artistic interests","category":"personality","percentile":0.9946,"significant":true},{"trait_id":"facet_emotionality","name":"Emotionality","category":"personality","percentile":0.7676,"significant":true},{"trait_id":"facet_imagination","name":"Imagination","category":"personality","percentile":0.3123,"significant":true},{"trait_id":"facet_intellect","name":"Intellect","category":"personality","percentile":0.9965,"significant":true},{"trait_id":"facet_liberalism","name":"Authority-challenging","category":"personality","percentile":0.7951,"significant":true}]},{"trait_id":"big5_conscientiousness","name":"Conscientiousness","category":"personality","percentile":0.987,"significant":true,"children":[{"trait_id":"facet_achievement_striving","name":"Achievement striving","category":"personality","percentile":0.8402,"significant":true},{"trait_id":"facet_cautiousness","name":"Cautiousness","category":"personality","percentile":0.9452,"significant":true},{"trait_id":"facet_dutifulness","name":"Dutifulness","category":"personality","percentile":0.7972,"significant":true},{"trait_id":"facet_orderliness","name":"Orderliness","category":"personality","percentile":0.7631,"significant":true},{"trait_id":"facet_self_discipline","name":"Self-discipline","category":"personality","percentile":0.7149,"significant":true},{"trait_id":"facet_self_efficacy","name":"Self-efficacy","category":"personality","percentile":0.6972,"significant":true}]},{"trait_id":"big5_extraversion","name":"Extraversion","category":"personality","percentile":0.0813,"significant":true,"children":[{"trait_id":"facet_activity_level","name":"Activity level","category":"personality","percentile":0.9619,"significant":true},{"trait_id":"facet_assertiveness","name":"Assertiveness","category":"personality","percentile":0.9191,"significant":true},{"trait_id":"facet_cheerfulness","name":"Cheerfulness","category":"personality","percentile":0.2295,"significant":true},{"trait_id":"facet_excitement_seeking","name":"Excitement-seeking","category":"personality","percentile":0.2106,"significant":true},{"trait_id":"facet_friendliness","name":"Outgoing","category":"personality","percentile":0.7057,"significant":true},{"trait_id":"facet_gregariousness","name":"Gregariousness","category":"personality","percentile":0.2214,"significant":true}]},{"trait_id":"big5_agreeableness","name":"Agreeableness","category":"personality","percentile":0.1893,"significant":true,"children":[{"trait_id":"facet_altruism","name":"Altruism","category":"personality","percentile":0.9714,"significant":true},{"trait_id":"facet_cooperation","name":"Cooperation","category":"personality","percentile":0.822,"significant":true},{"trait_id":"facet_modesty","name":"Modesty","category":"personality","percentile":0.7656,"significant":true},{"trait_id":"facet_morality","name":"Uncompromising","category":"personality","percentile":0.9477,"significant":true},{"trait_id":"facet_sympathy","name":"Sympathy","category":"personality","percentile":0.9991,"significant":true},{"trait_id":"facet_trust","name":"Trust","category":"personality","percentile":0.8282,"significant":true}]},{"trait_id":"big5_neuroticism","name":"Emotional range","category":"personality","percentile":0.945,"significant":true,"children":[{"trait_id":"facet_anger","name":"Fiery","category":"personality","percentile":0.0143,"significant":true},{"trait_id":"facet_anxiety","name":"Prone to worry","category":"personality","percentile":0.0624,"significant":true},{"trait_id":"facet_depression","name":"Melancholy","category":"personality","percentile":0.3542,"significant":true},{"trait_id":"facet_immoderation","name":"Immoderation","category":"personality","percentile":0.0111,"significant":true},{"trait_id":"facet_self_consciousness","name":"Self-consciousness","category":"personality","percentile":0.1977,"significant":true},{"trait_id":"facet_vulnerability","name":"Susceptible to stress","category":"personality","percentile":0.0711,"significant":true}]}],"needs":[{"trait_id":"need_challenge","name":"Challenge","category":"needs","percentile":0.0032,"significant":true},{"trait_id":"need_closeness","name":"Closeness","category":"needs","percentile":0.3692,"significant":true},{"trait_id":"need_curiosity","name":"Curiosity","category":"needs","percentile":0.8487,"significant":true},{"trait_id":"need_excitement","name":"Excitement","category":"needs","percentile":0.1151,"significant":true},{"trait_id":"need_harmony","name":"Harmony","category":"needs","percentile":0.4703,"significant":true},{"trait_id":"need_ideal","name":"Ideal","category":"needs","percentile":0.0238,"significant":true},{"trait_id":"need_liberty","name":"Liberty","category":"needs","percentile":0.1093,"significant":true},{"trait_id":"need_love","name":"Love","category":"needs","percentile":0.0118,"significant":true},{"trait_id":"need_practicality","name":"Practicality","category":"needs","percentile":0.0191,"significant":true},{"trait_id":"need_self_expression","name":"Self-expression","category":"needs","percentile":0.1852,"significant":true},{"trait_id":"need_stability","name":"Stability","category":"needs","percentile":0.4019,"significant":true},{"trait_id":"need_structure","name":"Structure","category":"needs","percentile":0.8909,"significant":true}],"values":[{"trait_id":"value_conservation","name":"Conservation","category":"values","percentile":0.5163,"significant":true},{"trait_id":"value_openness_to_change","name":"Openness to change","category":"values","percentile":0.6225,"significant":true},{"trait_id":"value_hedonism","name":"Hedonism","category":"values","percentile":0.0052,"significant":true},{"trait_id":"value_self_enhancement","name":"Self-enhancement","category":"values","percentile":0.0012,"significant":true},{"trait_id":"value_self_transcendence","name":"Self-transcendence","category":"values","percentile":0.345,"significant":true}],"warnings":[]},"version":"v3"},"evals":[],"jsHooks":[]}</script>
+<p>The actual use of the package is to apply it on the output from <a href="https://www.ibm.com/docs/en/app-connect/containers_cd?topic=SSTTDS_contcd/com.ibm.ace.icp.doc/localconn_ibmwatsonpi.html">IBM
+Personality Insight API</a>. <code>ibmsunburst::ibmsunburst()</code>
+accept the data as list, JSON or path to file.</p>
+<p>Say you have a text file of someone’s writing, called “sample.txt”.
+Here’s how you could query the API. There is no R wrapper for it…
+yet?</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>key <span class="ot">=</span> <span class="st">&quot;your-key-not-this&quot;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>url <span class="ot">=</span> <span class="st">&quot;https://gateway.watsonplatform.net/personality-insights/api/v3/profile?version=2017-10-13&quot;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>uname<span class="ot">=</span><span class="st">&quot;your-username-not-this&quot;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>pword<span class="ot">=</span><span class="st">&quot;your-password&quot;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(httr)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>cr<span class="ot">=</span><span class="fu">POST</span>(url,</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="fu">authenticate</span>(uname, pword),</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        <span class="fu">content_type</span>(<span class="st">&quot;text/plain;charset=utf-8&quot;</span>),</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        <span class="fu">accept_json</span>(),</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="at">body=</span><span class="fu">upload_file</span>(<span class="st">&quot;sample.txt&quot;</span>)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>insightdata <span class="ot">=</span> <span class="fu">content</span>(cr)</span></code></pre></div>
+<p>The result is a list, that you can directly pass to
+<code>ibmsunburst::ibmsunburst()</code>.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>ibmsunburst<span class="sc">::</span><span class="fu">ibmsunburst</span>(insightdata,</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>                         <span class="at">version =</span> <span class="st">&quot;v3&quot;</span>)</span></code></pre></div>
+<div id="htmlwidget-83455dbfce6f17c00c5d" style="width:288px;height:288px;" class="ibmsunburst html-widget"></div>
+<script type="application/json" data-for="htmlwidget-83455dbfce6f17c00c5d">{"x":{"data":{"word_count":1367,"processed_language":"en","personality":[{"trait_id":"big5_openness","name":"Openness","category":"personality","percentile":0.9969,"significant":true,"children":[{"trait_id":"facet_adventurousness","name":"Adventurousness","category":"personality","percentile":0.7854,"significant":true},{"trait_id":"facet_artistic_interests","name":"Artistic interests","category":"personality","percentile":0.9946,"significant":true},{"trait_id":"facet_emotionality","name":"Emotionality","category":"personality","percentile":0.7676,"significant":true},{"trait_id":"facet_imagination","name":"Imagination","category":"personality","percentile":0.3123,"significant":true},{"trait_id":"facet_intellect","name":"Intellect","category":"personality","percentile":0.9965,"significant":true},{"trait_id":"facet_liberalism","name":"Authority-challenging","category":"personality","percentile":0.7951,"significant":true}]},{"trait_id":"big5_conscientiousness","name":"Conscientiousness","category":"personality","percentile":0.987,"significant":true,"children":[{"trait_id":"facet_achievement_striving","name":"Achievement striving","category":"personality","percentile":0.8402,"significant":true},{"trait_id":"facet_cautiousness","name":"Cautiousness","category":"personality","percentile":0.9452,"significant":true},{"trait_id":"facet_dutifulness","name":"Dutifulness","category":"personality","percentile":0.7972,"significant":true},{"trait_id":"facet_orderliness","name":"Orderliness","category":"personality","percentile":0.7631,"significant":true},{"trait_id":"facet_self_discipline","name":"Self-discipline","category":"personality","percentile":0.7149,"significant":true},{"trait_id":"facet_self_efficacy","name":"Self-efficacy","category":"personality","percentile":0.6972,"significant":true}]},{"trait_id":"big5_extraversion","name":"Extraversion","category":"personality","percentile":0.0813,"significant":true,"children":[{"trait_id":"facet_activity_level","name":"Activity level","category":"personality","percentile":0.9619,"significant":true},{"trait_id":"facet_assertiveness","name":"Assertiveness","category":"personality","percentile":0.9191,"significant":true},{"trait_id":"facet_cheerfulness","name":"Cheerfulness","category":"personality","percentile":0.2295,"significant":true},{"trait_id":"facet_excitement_seeking","name":"Excitement-seeking","category":"personality","percentile":0.2106,"significant":true},{"trait_id":"facet_friendliness","name":"Outgoing","category":"personality","percentile":0.7057,"significant":true},{"trait_id":"facet_gregariousness","name":"Gregariousness","category":"personality","percentile":0.2214,"significant":true}]},{"trait_id":"big5_agreeableness","name":"Agreeableness","category":"personality","percentile":0.1893,"significant":true,"children":[{"trait_id":"facet_altruism","name":"Altruism","category":"personality","percentile":0.9714,"significant":true},{"trait_id":"facet_cooperation","name":"Cooperation","category":"personality","percentile":0.822,"significant":true},{"trait_id":"facet_modesty","name":"Modesty","category":"personality","percentile":0.7656,"significant":true},{"trait_id":"facet_morality","name":"Uncompromising","category":"personality","percentile":0.9477,"significant":true},{"trait_id":"facet_sympathy","name":"Sympathy","category":"personality","percentile":0.9991,"significant":true},{"trait_id":"facet_trust","name":"Trust","category":"personality","percentile":0.8282,"significant":true}]},{"trait_id":"big5_neuroticism","name":"Emotional range","category":"personality","percentile":0.945,"significant":true,"children":[{"trait_id":"facet_anger","name":"Fiery","category":"personality","percentile":0.0143,"significant":true},{"trait_id":"facet_anxiety","name":"Prone to worry","category":"personality","percentile":0.0624,"significant":true},{"trait_id":"facet_depression","name":"Melancholy","category":"personality","percentile":0.3542,"significant":true},{"trait_id":"facet_immoderation","name":"Immoderation","category":"personality","percentile":0.0111,"significant":true},{"trait_id":"facet_self_consciousness","name":"Self-consciousness","category":"personality","percentile":0.1977,"significant":true},{"trait_id":"facet_vulnerability","name":"Susceptible to stress","category":"personality","percentile":0.0711,"significant":true}]}],"needs":[{"trait_id":"need_challenge","name":"Challenge","category":"needs","percentile":0.0032,"significant":true},{"trait_id":"need_closeness","name":"Closeness","category":"needs","percentile":0.3692,"significant":true},{"trait_id":"need_curiosity","name":"Curiosity","category":"needs","percentile":0.8487,"significant":true},{"trait_id":"need_excitement","name":"Excitement","category":"needs","percentile":0.1151,"significant":true},{"trait_id":"need_harmony","name":"Harmony","category":"needs","percentile":0.4703,"significant":true},{"trait_id":"need_ideal","name":"Ideal","category":"needs","percentile":0.0238,"significant":true},{"trait_id":"need_liberty","name":"Liberty","category":"needs","percentile":0.1093,"significant":true},{"trait_id":"need_love","name":"Love","category":"needs","percentile":0.0118,"significant":true},{"trait_id":"need_practicality","name":"Practicality","category":"needs","percentile":0.0191,"significant":true},{"trait_id":"need_self_expression","name":"Self-expression","category":"needs","percentile":0.1852,"significant":true},{"trait_id":"need_stability","name":"Stability","category":"needs","percentile":0.4019,"significant":true},{"trait_id":"need_structure","name":"Structure","category":"needs","percentile":0.8909,"significant":true}],"values":[{"trait_id":"value_conservation","name":"Conservation","category":"values","percentile":0.5163,"significant":true},{"trait_id":"value_openness_to_change","name":"Openness to change","category":"values","percentile":0.6225,"significant":true},{"trait_id":"value_hedonism","name":"Hedonism","category":"values","percentile":0.0052,"significant":true},{"trait_id":"value_self_enhancement","name":"Self-enhancement","category":"values","percentile":0.0012,"significant":true},{"trait_id":"value_self_transcendence","name":"Self-transcendence","category":"values","percentile":0.345,"significant":true}],"warnings":[]},"version":"v3"},"evals":[],"jsHooks":[]}</script>
 <p>Enjoy visualizing IBM Personality Insights!</p>
 </div>
 
+
+
+<!-- code folding -->
 
 
 <!-- dynamically load mathjax for compatibility with self-contained -->

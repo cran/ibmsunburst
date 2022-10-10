@@ -1,24 +1,24 @@
-## ----setup, include = FALSE----------------------------------------------
+## ----setup, include = FALSE---------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
 
-## ----use-examples--------------------------------------------------------
+## ----use-examples-------------------------------------------------------------
 ibmsunburst::ibmsunburst(system.file(
   "extdata", "profiles",
   "en_v2.json", package = "ibmsunburst"
 ),
                            version = "v2")
 
+## -----------------------------------------------------------------------------
 ibmsunburst::ibmsunburst(system.file(
   "extdata", "profiles",
   "en_v3.json", package = "ibmsunburst"
 ),
                            version = "v3")
 
-
-## ----echo=FALSE----------------------------------------------------------
+## ----echo=FALSE---------------------------------------------------------------
 insightdata <- list(word_count = 1367L, processed_language = "en", personality = list(
     list(trait_id = "big5_openness", name = "Openness", category = "personality", 
         percentile = 0.996943724028395, significant = TRUE, children = list(
@@ -144,8 +144,7 @@ insightdata <- jsonlite::toJSON(
     )
 
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 ibmsunburst::ibmsunburst(insightdata,
                          version = "v3")
-
 
